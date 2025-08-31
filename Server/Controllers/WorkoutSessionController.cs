@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FitnessTracker.Server.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/workoutsessions")]
     public class WorkoutSessionController : ControllerBase
     {
         private readonly FitnessTrackerContext _context;
@@ -45,6 +45,10 @@ namespace FitnessTracker.Server.Controllers
         [HttpPost]
         public async Task<ActionResult<WorkoutSession>> CreateWorkout(WorkoutSessionCreateDto workoutDto)
         {
+            if (workoutDto == null || workoutDto.AppliedExercises.Count == 0)
+            {
+                return BadRequest("Antrenman verisi boş olamaz veya en az bir egzersiz içermelidir.");
+            }
             var newWorkout = new WorkoutSession
             {
                 Date = workoutDto.Date,
@@ -60,15 +64,22 @@ namespace FitnessTracker.Server.Controllers
                     Sets = exerciseDto.Sets,
                     Reps = exerciseDto.Reps,
                     Weight = exerciseDto.Weight,
-                    Notes = exerciseDto.Notes
+                    Notes = exerciseDto.Notes,
                 };
                 newWorkout.AppliedExercises.Add(appliedExercise);
             }
 
             _context.WorkoutSessions.Add(newWorkout);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, $"Veritabanı güncelleme hatası: {ex.InnerException?.Message ?? ex.Message}");
+            }
 
-            return CreatedAtAction(nameof(GetWorkout), new { id = newWorkout.Id }, newWorkout);
+            return Ok(new { message = "Antrenman başarıyla kaydedildi.", id = newWorkout.Id });
         }
 
         [HttpDelete("{id}")]

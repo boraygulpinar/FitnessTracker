@@ -5,6 +5,6 @@ namespace FitnessTracker.Server.DTOs
         public DateTime Date { get; set; }
         public string? Notes { get; set; }
         public int? CardioDuration { get; set; }
-        public ICollection<AppliedExerciseCreateDto> AppliedExercises { get; set; } = new List<AppliedExerciseCreateDto>();
+        public List<AppliedExerciseCreateDto> AppliedExercises { get; set; } = new List<AppliedExerciseCreateDto>();
     }
 }

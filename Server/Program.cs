@@ -3,10 +3,21 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
+builder.Services.AddControllers().AddJsonOptions(x =>
+    x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 
 //dbcontext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -15,21 +26,8 @@ builder.Services.AddDbContext<FitnessTrackerContext>(options => options.UseSqlSe
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//cors
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowSpecificOrigin",
-        policyBuilder =>
-        {
-            policyBuilder.WithOrigins("http://localhost:3000"). //frontend adres
-            AllowAnyHeader().
-            AllowAnyMethod();
-        });
-});
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -37,8 +35,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(MyAllowSpecificOrigins);
 
-app.UseCors("AllowSpecificOrigin");
+app.UseAuthorization();
 
 app.MapControllers();
 
