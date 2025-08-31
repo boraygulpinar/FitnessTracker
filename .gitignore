@@ -1,0 +1,24 @@
+# filepath: c:\Users\a_bor\Desktop\FitnessTracker\.gitignore
+
+# Visual Studio / .NET Core
+**/[Bb]in/
+**/[Oo]bj/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Node.js / Vite
+**/node_modules/
+/client/dist/
+/client/.vite/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
