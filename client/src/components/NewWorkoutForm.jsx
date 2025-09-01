@@ -68,7 +68,7 @@ const NewWorkoutForm = ({ templates, onSave, workoutToEdit, onCancelEdit }) => {
           exerciseTemplateId: parseInt(ex.templateId),
           sets: parseInt(ex.sets),
           reps: parseInt(ex.reps),
-          weight: parseInt(ex.weight),
+          weight: parseFloat(ex.weight),
           notes: ex.notes,
         })),
     };
