@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import axios from "axios";
 import NewWorkoutForm from "./components/NewWorkoutForm";
@@ -10,6 +10,8 @@ function App() {
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [workoutToEdit, setWorkoutToEdit] = useState(null);
+  const formRef = useRef(null); // sayfayı form'a kaydırmak için kullanılacak
 
   const fetchWorkouts = async () => {
     try {
@@ -44,11 +46,15 @@ function App() {
   const handleSaveWorkout = async (workoutData) => {
     console.log("Kaydedilecek Antrenman Verisi:", workoutData);
     try {
-      const response = await axios.post(
-        "http://localhost:5074/api/workoutsessions",
-        workoutData
-      );
-      console.log(response.data.message);
+      if (workoutToEdit) {
+        await axios.put(
+          `${API_URL}/api/workoutsessions/${workoutToEdit.id}`,
+          workoutData
+        );
+      } else {
+        await axios.post(`${API_URL}/api/workoutsessions`, workoutData);
+      }
+      setWorkoutToEdit(null);
       fetchWorkouts();
     } catch (error) {
       console.error("Antrenman kaydedilirken bir hata oluştu", error);
@@ -72,9 +78,25 @@ function App() {
     }
   };
 
+  const handleStartEdit = (workout) => {
+    setWorkoutToEdit(workout);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setWorkoutToEdit(null);
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <NewWorkoutForm templates={templates} onSave={handleSaveWorkout} />
+      <div ref={formRef}>
+        <NewWorkoutForm
+          templates={templates}
+          onSave={handleSaveWorkout}
+          workoutToEdit={workoutToEdit}
+          onCancelEdit={handleCancelEdit}
+        />
+      </div>
 
       <div className="mt-10">
         <h2 className="text-2xl font-bold mb-6 text-white">
@@ -113,26 +135,48 @@ function App() {
                     </p>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDeleteWorkout(workout.id)}
-                  className="absolute top-4 right-4 text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Antrenmanı Sil"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                <div className="flex items-center gap-2 absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleStartEdit(workout)}
+                    className="text-slate-500 hover:text-sky-400 transition-colors"
+                    title="Antrenmanı Düzenle"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteWorkout(workout.id)}
+                    className="text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Antrenmanı Sil"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <ul className="mt-4 space-y-3">

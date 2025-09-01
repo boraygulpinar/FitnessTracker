@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const NewWorkoutForm = ({ templates, onSave }) => {
+const NewWorkoutForm = ({ templates, onSave, workoutToEdit, onCancelEdit }) => {
   const initialExerciseState = {
     id: Date.now(),
     templateId: "",
@@ -14,6 +14,27 @@ const NewWorkoutForm = ({ templates, onSave }) => {
   const [cardio, setCardio] = useState("");
   const [exercises, setExercises] = useState([initialExerciseState]);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (workoutToEdit) {
+      setDate(new Date(workoutToEdit.date).toISOString().split("T")[0]);
+      setCardio(workoutToEdit.cardioDuration || "");
+      setExercises(
+        workoutToEdit.appliedExercises.map((ex) => ({
+          id: ex.id,
+          templateId: ex.exerciseTemplate.id,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight: ex.weight,
+          notes: ex.notes || "",
+        }))
+      );
+    } else {
+      setDate(new Date().toISOString().split("T")[0]);
+      setCardio("");
+      setExercises([{ ...initialExerciseState, id: Date.now() }]);
+    }
+  }, [workoutToEdit]);
 
   const handleExerciseChange = (id, field, value) => {
     setExercises(
@@ -31,11 +52,7 @@ const NewWorkoutForm = ({ templates, onSave }) => {
     }
   };
 
-  const resetForm = () => {
-    setDate(new Date().toISOString().split("T")[0]);
-    setCardio("");
-    setExercises([{ ...initialExerciseState, id: Date.now() }]);
-  };
+  const isEditMode = !!workoutToEdit;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,7 +75,6 @@ const NewWorkoutForm = ({ templates, onSave }) => {
 
     try {
       await onSave(workoutData);
-      resetForm(); // Başarılı kayıttan sonra formu sıfırla
     } catch (error) {
       console.error("Form save failed", error);
     } finally {
@@ -69,7 +85,7 @@ const NewWorkoutForm = ({ templates, onSave }) => {
   return (
     <div className="bg-slate-800 p-6 rounded-lg shadow-xl mb-10">
       <h2 className="text-2xl font-bold mb-6 text-white">
-        Yeni Antrenman Kaydet
+        {isEditMode ? "Antrenmanı Düzenle" : "Yeni Antrenman Kaydet"}
       </h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -105,7 +121,6 @@ const NewWorkoutForm = ({ templates, onSave }) => {
             />
           </div>
         </div>
-
         <h3 className="text-xl font-semibold mb-4 text-white">Egzersizler</h3>
         <div className="space-y-4">
           {exercises.map((ex) => (
@@ -199,7 +214,6 @@ const NewWorkoutForm = ({ templates, onSave }) => {
             </div>
           ))}
         </div>
-
         <div className="flex items-center justify-between mt-6">
           <button
             type="button"
@@ -220,13 +234,28 @@ const NewWorkoutForm = ({ templates, onSave }) => {
             </svg>
             Egzersiz Ekle
           </button>
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:bg-sky-800 disabled:cursor-not-allowed"
-          >
-            {isSaving ? "Kaydediliyor..." : "Antrenmanı Kaydet"}
-          </button>
+          <div className="flex items-center gap-4">
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="text-slate-400 hover:text-white font-bold py-2 px-6 rounded-md transition-colors"
+              >
+                İptal
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:bg-sky-800 disabled:cursor-not-allowed"
+            >
+              {isSaving
+                ? "Kaydediliyor..."
+                : isEditMode
+                ? "Değişiklikleri Kaydet"
+                : "Antrenmanı Kaydet"}
+            </button>
+          </div>
         </div>
       </form>
     </div>

@@ -96,5 +96,47 @@ namespace FitnessTracker.Server.Controllers
 
             return NoContent();
         }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult> UpdateWorkout(int id, WorkoutSessionCreateDto workoutDto)
+        {
+            var workoutToUpdate = await _context.WorkoutSessions
+            .Include(w => w.AppliedExercises)
+            .FirstOrDefaultAsync(w => w.Id == id);
+
+            if (workoutToUpdate == null)
+            {
+                return NotFound();
+            }
+
+            workoutToUpdate.Date = workoutDto.Date;
+            workoutToUpdate.Notes = workoutDto.Notes;
+            workoutToUpdate.CardioDuration = workoutDto.CardioDuration;
+
+            workoutToUpdate.AppliedExercises.Clear();
+            foreach (var exerciseDto in workoutDto.AppliedExercises)
+            {
+                var appliedExercise = new AppliedExercise
+                {
+                    ExerciseTemplateId = exerciseDto.ExerciseTemplateId,
+                    Sets = exerciseDto.Sets,
+                    Reps = exerciseDto.Reps,
+                    Weight = exerciseDto.Weight,
+                    Notes = exerciseDto.Notes,
+                };
+                workoutToUpdate.AppliedExercises.Add(appliedExercise);
+            }
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, $"Veritabanı güncelleme hatası: {ex.InnerException?.Message ?? ex.Message}");
+            }
+
+            return NoContent();
+        }
+
     }
 }
