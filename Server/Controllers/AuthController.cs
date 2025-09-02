@@ -28,7 +28,7 @@ namespace FitnessTracker.Server.Controllers
             var userExists = await _userManager.FindByEmailAsync(model.Email);
             if (userExists != null)
             {
-                return Conflict(new { Message = "Email kullanılıyor." });
+                return BadRequest(new { Errors = new[] { "Bu email adresi zaten kullanılıyor." } });
             }
 
             ApplicationUser user = new()
@@ -39,9 +39,12 @@ namespace FitnessTracker.Server.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
+
             if (!result.Succeeded)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "Kullanıcı oluşturulamadı, şifreniz en az 6 karakterden oluşmalıdır.", Errors = result.Errors });
+                var errors = result.Errors.Select(e => e.Description);
+
+                return BadRequest(new { Errors = errors });
             }
 
             return Ok(new { Message = "Kullanıcı başarıyla oluşturuldu." });

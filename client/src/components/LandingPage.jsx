@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 const LandingPage = () => {
   return (
     <div
-      className="relative min-h-screen bg-cover bg-center"
+      className="relative min-h-screen bg-cover bg-center overflow-hidden"
       style={{ backgroundImage: "url('src/assets/background.jpg')" }}
     >
       <div className="absolute inset-0 bg-black opacity-70"></div>
@@ -24,11 +24,11 @@ const LandingPage = () => {
         </p>
 
         <Link
-          to="/dashboard"
+          to="/login"
           className="flex items-center gap-3 bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 text-lg shadow-lg hover:shadow-sky-400/30 transform hover:scale-105 animate-fade-in-up"
           style={{ animationDelay: "0.6s" }}
         >
-          Panele Git
+          Başlamak için Giriş Yap
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6"

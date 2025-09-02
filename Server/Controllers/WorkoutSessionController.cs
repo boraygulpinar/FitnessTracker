@@ -1,142 +1,159 @@
-using FitnessTracker.Server.Data;
-using FitnessTracker.Server.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FitnessTracker.Server.Data;
+using FitnessTracker.Server.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using FitnessTracker.Server.DTOs;
 
 namespace FitnessTracker.Server.Controllers
 {
+    [Route("api/[controller]")]
     [ApiController]
-    [Route("api/workoutsessions")]
-    public class WorkoutSessionController : ControllerBase
+    [Authorize]
+    public class WorkoutSessionsController : ControllerBase
     {
         private readonly FitnessTrackerContext _context;
 
-        public WorkoutSessionController(FitnessTrackerContext context)
+        public WorkoutSessionsController(FitnessTrackerContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<WorkoutSession>>> GetWorkouts()
+        public async Task<ActionResult<IEnumerable<WorkoutSession>>> GetWorkoutSessions()
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             return await _context.WorkoutSessions
-            .Include(w => w.AppliedExercises)
-            .ThenInclude(we => we.ExerciseTemplate)
-            .OrderByDescending(w => w.Date)
-            .ToListAsync();
+                .Where(ws => ws.ApplicationUserId == userId)
+                .Include(ws => ws.AppliedExercises)
+                .ThenInclude(ae => ae.ExerciseTemplate)
+                .OrderByDescending(ws => ws.Date)
+                .ToListAsync();
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<WorkoutSession>> GetWorkout(int id)
+        public async Task<ActionResult<WorkoutSession>> GetWorkoutSession(int id)
         {
-            var workout = await _context.WorkoutSessions
-            .Include(w => w.AppliedExercises)
-            .ThenInclude(we => we.ExerciseTemplate)
-            .FirstOrDefaultAsync(w => w.Id == id);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (workout == null)
+            var workoutSession = await _context.WorkoutSessions
+                .Include(ws => ws.AppliedExercises)
+                .ThenInclude(ae => ae.ExerciseTemplate)
+                .FirstOrDefaultAsync(ws => ws.Id == id && ws.ApplicationUserId == userId);
+
+            if (workoutSession == null)
             {
                 return NotFound();
             }
 
-            return workout;
+            return workoutSession;
         }
-
         [HttpPost]
-        public async Task<ActionResult<WorkoutSession>> CreateWorkout(WorkoutSessionCreateDto workoutDto)
+        public async Task<ActionResult<WorkoutSession>> PostWorkoutSession(WorkoutSessionCreateDto workoutDto)
         {
-            if (workoutDto == null || workoutDto.AppliedExercises.Count == 0)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var workoutSession = new WorkoutSession
             {
-                return BadRequest("Antrenman verisi boş olamaz veya en az bir egzersiz içermelidir.");
-            }
-            var newWorkout = new WorkoutSession
-            {
+                ApplicationUserId = userId,
                 Date = workoutDto.Date,
                 Notes = workoutDto.Notes,
-                CardioDuration = workoutDto.CardioDuration
+                CardioDuration = workoutDto.CardioDuration,
+                AppliedExercises = workoutDto.AppliedExercises.Select(aeDto => new AppliedExercise
+                {
+                    ExerciseTemplateId = aeDto.ExerciseTemplateId,
+                    Sets = aeDto.Sets,
+                    Reps = aeDto.Reps,
+                    Weight = aeDto.Weight,
+                    Notes = aeDto.Notes
+                }).ToList()
             };
 
-            foreach (var exerciseDto in workoutDto.AppliedExercises)
+            _context.WorkoutSessions.Add(workoutSession);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetWorkoutSession", new { id = workoutSession.Id }, workoutSession);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutWorkoutSession(int id, WorkoutSessionCreateDto workoutDto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var existingSession = await _context.WorkoutSessions
+                .Include(s => s.AppliedExercises)
+                .FirstOrDefaultAsync(ws => ws.Id == id);
+
+            if (existingSession == null)
             {
-                var appliedExercise = new AppliedExercise
-                {
-                    ExerciseTemplateId = exerciseDto.ExerciseTemplateId,
-                    Sets = exerciseDto.Sets,
-                    Reps = exerciseDto.Reps,
-                    Weight = exerciseDto.Weight,
-                    Notes = exerciseDto.Notes,
-                };
-                newWorkout.AppliedExercises.Add(appliedExercise);
+                return NotFound();
             }
 
-            _context.WorkoutSessions.Add(newWorkout);
+            if (existingSession.ApplicationUserId != userId)
+            {
+                return Forbid();
+            }
+
+            existingSession.Date = workoutDto.Date;
+            existingSession.Notes = workoutDto.Notes;
+            existingSession.CardioDuration = workoutDto.CardioDuration;
+
+            _context.AppliedExercises.RemoveRange(existingSession.AppliedExercises);
+
+            existingSession.AppliedExercises = workoutDto.AppliedExercises.Select(aeDto => new AppliedExercise
+            {
+                ExerciseTemplateId = aeDto.ExerciseTemplateId,
+                Sets = aeDto.Sets,
+                Reps = aeDto.Reps,
+                Weight = aeDto.Weight,
+                Notes = aeDto.Notes
+            }).ToList();
+
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateConcurrencyException)
             {
-                return StatusCode(500, $"Veritabanı güncelleme hatası: {ex.InnerException?.Message ?? ex.Message}");
+                if (!WorkoutSessionExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
             }
 
-            return Ok(new { message = "Antrenman başarıyla kaydedildi.", id = newWorkout.Id });
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteWorkout(int id)
+        public async Task<IActionResult> DeleteWorkoutSession(int id)
         {
-            var workout = await _context.WorkoutSessions.FindAsync(id);
-            if (workout == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var workoutSession = await _context.WorkoutSessions.FindAsync(id);
+
+            if (workoutSession == null)
             {
                 return NotFound();
             }
 
-            _context.WorkoutSessions.Remove(workout);
+            if (workoutSession.ApplicationUserId != userId)
+            {
+                return Forbid();
+            }
+
+            _context.WorkoutSessions.Remove(workoutSession);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult> UpdateWorkout(int id, WorkoutSessionCreateDto workoutDto)
+        private bool WorkoutSessionExists(int id)
         {
-            var workoutToUpdate = await _context.WorkoutSessions
-            .Include(w => w.AppliedExercises)
-            .FirstOrDefaultAsync(w => w.Id == id);
-
-            if (workoutToUpdate == null)
-            {
-                return NotFound();
-            }
-
-            workoutToUpdate.Date = workoutDto.Date;
-            workoutToUpdate.Notes = workoutDto.Notes;
-            workoutToUpdate.CardioDuration = workoutDto.CardioDuration;
-
-            workoutToUpdate.AppliedExercises.Clear();
-            foreach (var exerciseDto in workoutDto.AppliedExercises)
-            {
-                var appliedExercise = new AppliedExercise
-                {
-                    ExerciseTemplateId = exerciseDto.ExerciseTemplateId,
-                    Sets = exerciseDto.Sets,
-                    Reps = exerciseDto.Reps,
-                    Weight = exerciseDto.Weight,
-                    Notes = exerciseDto.Notes,
-                };
-                workoutToUpdate.AppliedExercises.Add(appliedExercise);
-            }
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                return StatusCode(500, $"Veritabanı güncelleme hatası: {ex.InnerException?.Message ?? ex.Message}");
-            }
-
-            return NoContent();
+            return _context.WorkoutSessions.Any(e => e.Id == id);
         }
-
     }
 }

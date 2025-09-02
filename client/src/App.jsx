@@ -8,17 +8,47 @@ import MainLayout from "./components/MainLayout";
 import Dashboard from "./components/Dashboard";
 import WorkoutLogPage from "./components/WorkoutLogPage";
 import Statistics from "./components/Statistics";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 const API_URL = "http://localhost:5074";
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem("token")
+  );
+
   const [templates, setTemplates] = useState([]);
   const [workouts, setWorkouts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [workoutToEdit, setWorkoutToEdit] = useState(null);
   const formRef = useRef(null);
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsAuthenticated(false);
+    setWorkouts([]);
+    setTemplates([]);
+    setError(null);
+    setWorkoutToEdit(null);
+    navigate("/login");
+  };
 
   const fetchWorkouts = async () => {
     try {
@@ -26,28 +56,36 @@ function App() {
       setWorkouts(response.data);
     } catch (err) {
       setError("Antrenmanlar çekilirken bir hata oluştu.");
-      console.log(err);
+      console.error(err);
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const templatesResponse = await axios.get(
-          `${API_URL}/api/ExerciseTemplates`
-        );
+        const [templatesResponse, workoutsResponse] = await Promise.all([
+          axios.get(`${API_URL}/api/ExerciseTemplates`),
+          axios.get(`${API_URL}/api/workoutsessions`),
+        ]);
         setTemplates(templatesResponse.data);
-        await fetchWorkouts();
+        setWorkouts(workoutsResponse.data);
       } catch (err) {
         setError("Veriler çekilirken bir hata oluştu.");
-        console.log(err);
+        console.error(err);
+        if (err.response && err.response.status === 401) {
+          handleLogout();
+        }
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
 
   const handleSaveWorkout = async (workoutData) => {
     try {
@@ -60,7 +98,7 @@ function App() {
         await axios.post(`${API_URL}/api/workoutsessions`, workoutData);
       }
       setWorkoutToEdit(null);
-      fetchWorkouts();
+      await fetchWorkouts();
     } catch (error) {
       console.error("Antrenman kaydedilirken bir hata oluştu", error);
     }
@@ -94,33 +132,49 @@ function App() {
 
   return (
     <Routes>
-      {/* landingpage */}
+      {/* public routes */}
       <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/login"
+        element={<Login onLoginSuccess={() => setIsAuthenticated(true)} />}
+      />
+      <Route path="/register" element={<Register />} />
 
-      {/* mainapp */}
-      <Route element={<MainLayout />}>
-        <Route path="/dashboard" element={<Dashboard workouts={workouts} />} />
-        <Route
-          path="/workouts"
-          element={
-            <WorkoutLogPage
-              templates={templates}
-              workouts={workouts}
-              loading={loading}
-              error={error}
-              onSave={handleSaveWorkout}
-              onEdit={handleStartEdit}
-              onDelete={handleDeleteWorkout}
-              workoutToEdit={workoutToEdit}
-              onCancelEdit={handleCancelEdit}
-              formRef={formRef}
-            />
-          }
-        />
-        <Route
-          path="/statistics"
-          element={<Statistics workouts={workouts} templates={templates} />}
-        />
+      {/* login olunan */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<MainLayout onLogout={handleLogout} />}>
+          <Route
+            path="/dashboard"
+            element={
+              <Dashboard
+                workouts={workouts}
+                onEdit={handleStartEdit}
+                onDelete={handleDeleteWorkout}
+              />
+            }
+          />
+          <Route
+            path="/workouts"
+            element={
+              <WorkoutLogPage
+                templates={templates}
+                workouts={workouts}
+                loading={loading}
+                error={error}
+                onSave={handleSaveWorkout}
+                onEdit={handleStartEdit}
+                onDelete={handleDeleteWorkout}
+                workoutToEdit={workoutToEdit}
+                onCancelEdit={handleCancelEdit}
+                formRef={formRef}
+              />
+            }
+          />
+          <Route
+            path="/statistics"
+            element={<Statistics workouts={workouts} templates={templates} />}
+          />
+        </Route>
       </Route>
     </Routes>
   );
