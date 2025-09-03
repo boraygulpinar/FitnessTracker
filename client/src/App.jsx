@@ -53,7 +53,7 @@ function App() {
 
   const fetchWorkouts = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/workoutsessions`);
+      const response = await axios.get(`${API_URL}/workoutsessions`);
       setWorkouts(response.data);
     } catch (err) {
       setError("Antrenmanlar çekilirken bir hata oluştu.");
@@ -67,8 +67,8 @@ function App() {
       setError(null);
       try {
         const [templatesResponse, workoutsResponse] = await Promise.all([
-          axios.get(`${API_URL}/api/ExerciseTemplates`),
-          axios.get(`${API_URL}/api/workoutsessions`),
+          axios.get(`${API_URL}/ExerciseTemplates`),
+          axios.get(`${API_URL}/workoutsessions`),
         ]);
         setTemplates(templatesResponse.data);
         setWorkouts(workoutsResponse.data);
@@ -92,11 +92,11 @@ function App() {
     try {
       if (workoutToEdit) {
         await axios.put(
-          `${API_URL}/api/workoutsessions/${workoutToEdit.id}`,
+          `${API_URL}/workoutsessions/${workoutToEdit.id}`,
           workoutData
         );
       } else {
-        await axios.post(`${API_URL}/api/workoutsessions`, workoutData);
+        await axios.post(`${API_URL}/workoutsessions`, workoutData);
       }
       setWorkoutToEdit(null);
       await fetchWorkouts();
@@ -113,7 +113,7 @@ function App() {
     )
       return;
     try {
-      await axios.delete(`${API_URL}/api/workoutsessions/${id}`);
+      await axios.delete(`${API_URL}/workoutsessions/${id}`);
       setWorkouts(workouts.filter((w) => w.id !== id));
     } catch (err) {
       setError("Antrenman silinirken bir hata oluştu.");
