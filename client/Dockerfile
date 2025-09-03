@@ -5,13 +5,16 @@ COPY package.json ./
 COPY package-lock.json ./
 RUN npm install
 COPY . .
-# VITE_API_URL build anında verilecek
-ARG VITE_API_URL
+# API URL'sini artık /api olarak ayarlıyoruz
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Stage 2: Serve
 FROM nginx:stable-alpine
+# Önceki adımdaki derlenmiş dosyaları kopyala
 COPY --from=build /app/dist /usr/share/nginx/html
+# YENİ: Kendi Nginx yapılandırmamızı kopyala
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
