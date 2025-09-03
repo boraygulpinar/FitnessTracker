@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
+import backgroundImage from "../assets/background.jpg";
 
 const LandingPage = () => {
   return (
     <div
       className="relative min-h-screen bg-cover bg-center overflow-hidden"
-      style={{ backgroundImage: "url('src/assets/background.jpg')" }}
+      style={{ backgroundImage: `url(${backgroundImage})` }}
     >
       <div className="absolute inset-0 bg-black opacity-70"></div>
 
