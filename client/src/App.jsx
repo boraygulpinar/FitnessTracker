@@ -25,7 +25,8 @@ axios.interceptors.request.use(
   }
 );
 
-const API_URL = "http://localhost:5074";
+// const API_URL = "http://localhost:5074";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
