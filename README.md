@@ -2,6 +2,8 @@
 
 Kişisel antrenman günlüğünüzü tutabileceğiniz, egzersizlerinizi ve ilerlemenizi takip edebileceğiniz modern bir web uygulaması.
 
+**Web Sitesi:**  [https://fitnesstracker.com.tr](https://fitnesstracker.com.tr)
+
 ---
 
 ## 🚀 Proje Özellikleri
