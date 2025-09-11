@@ -1,4 +1,17 @@
 services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql
+    environment:
+      SA_PASSWORD: Dkmf1rmt2!
+      ACCEPT_EULA: Y
+    ports:
+      - "1433:1433"
+    networks:
+      - app-network
+    volumes:
+      - mssql_data:/var/opt/mssql
+
   backend:
     build: ./Server
     container_name: backend
@@ -21,16 +34,8 @@ services:
     networks:
       - app-network
 
-  db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: mssql
-    environment:
-      SA_PASSWORD: YourStrong(!)Password
-      ACCEPT_EULA: Y
-    ports:
-      - "1433:1433"
-    networks:
-      - app-network
-
 networks:
   app-network:
+
+volumes:
+  mssql_data:
